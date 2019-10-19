@@ -1,0 +1,171 @@
+Customer Segmentation
+
+I guess most of us agree that customers have always been the key element for the success in the organization because no matter how specific a brand is, every single one of customer is individual and they deserve to be treated as such. However, things get complicated while treating each individual differently. Hence, that is when the CUSTOMER SEGMENTATION comes in picture.
+
+As a marketing graduate, I must say that Customer Segmentation has its own importance both in theoretical and real world. Every marketing students for sure have mugged up the concepts, importance, bases, types, uses and many more. But, my point here is not to discuss on these topics. Rather my intention is totally devoted in the way of segmenting the customers.
+
+I did quite a research on how to segment the customer, went through google on various approaches. But one approach really made me excited and made me learn more about it. The approach was RFM analysis (Recency, Frequency, Monetary value Analysis). Well I will not be discussing in detail about this approach here. However, if you wanna know more about it, please go through this link https://en.wikipedia.org/wiki/RFM_(customer_value)
+
+Loading libraries for the analysis purpose
+
+import pandas as pd
+import numpy as np 
+import matplotlib.pyplot as plt
+import datetime as dt
+%matplotlib inline
+
+
+Loading of Dataset
+
+The data used here is the Online Retail dataset Summary of data: This is a transnational data set which contains all the transactions occurring between 01/12/2010 and 09/12/2011 for a UK-based and registered non-store online retail link :- https://archive.ics.uci.edu/ml/machine-learning-databases/00352/
+
+df = pd.read_excel("D:/Online Retail.xlsx")
+
+View of First 5 rows of the data
+
+df.head()
+
+	InvoiceNo 	StockCode 	Description 	Quantity 	InvoiceDate 	UnitPrice 	CustomerID 	Country 	TotalSum
+0 	536365 	85123A 	WHITE HANGING HEART T-LIGHT HOLDER 	6 	2010-12-01 08:26:00 	2.55 	17850.0 	United Kingdom 	15.30
+1 	536365 	71053 	WHITE METAL LANTERN 	6 	2010-12-01 08:26:00 	3.39 	17850.0 	United Kingdom 	20.34
+2 	536365 	84406B 	CREAM CUPID HEARTS COAT HANGER 	8 	2010-12-01 08:26:00 	2.75 	17850.0 	United Kingdom 	22.00
+3 	536365 	84029G 	KNITTED UNION FLAG HOT WATER BOTTLE 	6 	2010-12-01 08:26:00 	3.39 	17850.0 	United Kingdom 	20.34
+4 	536365 	84029E 	RED WOOLLY HOTTIE WHITE HEART. 	6 	2010-12-01 08:26:00 	3.39 	17850.0 	United Kingdom 	20.34
+RFM analysis
+
+    Calculation of Monetary Value Monetary Value = UnitPrice*Quantity (this is the M part of RFM analysis)
+
+# Monetary Value is calculated
+
+df['TotalSum'] = df['UnitPrice']*df['Quantity']
+
+
+    Calculation of Recency and Frequency i.e R and F In order to calculate Recency part, assume maximum date of Invoice being issued as last day for the analysis purpose and I have added one additional day. As in total following below code generates all three elements of RFM analysis
+
+snap_date = max(df.InvoiceDate) +dt.timedelta(days = 1)
+
+datamart = df.groupby('CustomerID').agg({'InvoiceDate': lambda x: (snap_date-x.max()).days,
+
+                                        'InvoiceNo':'count',
+
+                                        'TotalSum':"mean"})
+
+Renaming to make the table more logical
+
+datamart = datamart.rename({'InvoiceDate':"Recency",
+
+                "InvoiceNo":"Frequency",
+
+                'TotalSum':"MonetaryValue"}, axis = 1)
+
+datamart.head()
+
+	Recency 	Frequency 	MonetaryValue
+CustomerID 			
+12346.0 	326 	2 	0.000000
+12747.0 	2 	103 	40.737961
+12748.0 	1 	4642 	6.262839
+12749.0 	4 	231 	16.745455
+12820.0 	3 	59 	15.971864
+
+Creating quintles for the purpose of making segmentation
+
+r_labels = range(5,0,-1)
+
+datamart['R'] = pd.qcut(datamart['Recency'], 5,labels = r_labels )
+
+f_labels = range(1,6)
+
+datamart['F'] = pd.qcut(datamart['Frequency'], 5, labels = f_labels)
+
+m_labels = range(1,6)
+
+datamart['M'] = pd.qcut(datamart['MonetaryValue'], 5, labels = m_labels)
+
+def rfm_segment(x):
+
+    return str(x['R'])+str(x['F'])+str(x['M'])   
+
+def rfm_score(x):
+
+    return int(x['R'])+int(x['F'])+int(x['M'])
+
+datamart['RFM_segment'] = datamart.apply(rfm_segment, axis  = 1)
+
+datamart['RFM_score'] = datamart.apply(rfm_score, axis = 1)
+
+datamart['R'] = pd.to_numeric(datamart['R'])
+
+datamart['F'] = pd.to_numeric(datamart['F'])
+
+datamart['M'] = pd.to_numeric(datamart['M'])
+
+
+Conditions to segment the customer Segementation is based on :- https://www.putler.com/rfm-analysis/
+
+def segment_me(datamart):
+
+    if (datamart['R']>=4  and datamart['R']<=5 and datamart['F']>=4 and datamart['F']<=5 and datamart['M']>=4 and datamart['M']<=5):
+
+        return "Champions"
+
+    elif (datamart['R']>=2  and datamart['R']<=5 and datamart['F']>=3 and datamart['F']<=5 and datamart['M']>=3 and datamart['M']<=5):
+
+        return "Loyal Customer"
+
+    elif (datamart['R']>=3  and datamart['R']<=5 and datamart['F']>=1 and datamart['F']<=2 and datamart['M']>=1 and datamart['M']<=2):
+
+        return "Potential Loyalist"
+
+    elif (datamart['R']>=4  and datamart['R']<=5 and datamart['F']>=0 and datamart['F']<=1 and datamart['M']>=0 and datamart['M']<=1):
+
+        return "Recent Customer"
+
+    elif (datamart['R']>=3  and datamart['R']<=4 and datamart['F']>=0 and datamart['F']<=1 and datamart['M']>=0 and datamart['M']<=1):
+
+        return "Promising"
+
+    elif (datamart['R']>=2  and datamart['R']<=3 and datamart['F']>=2 and datamart['F']<=3 and datamart['M']>=2 and datamart['M']<=3):
+
+        return "Customer Needing Attention"
+
+    elif (datamart['R']>=2  and datamart['R']<=3 and datamart['F']>=0 and datamart['F']<=2 and datamart['M']>=0 and datamart['M']<=2):
+
+        return "About to Sleep"
+
+    elif (datamart['R']>=0  and datamart['R']<=2 and datamart['F']>=2 and datamart['F']<=5 and datamart['M']>=2 and datamart['M']<=5):
+
+        return "At risk"
+
+    elif (datamart['R']>=0  and datamart['R']<=1 and datamart['F']>=1 and datamart['F']<=2 and datamart['M']>=1 and datamart['M']<=2):
+
+        return "Cannot lose them"
+
+    elif (datamart['R']>=1  and datamart['R']<=2 and datamart['F']>=1 and datamart['F']<=2 and datamart['M']>=1 and datamart['M']<=2):
+
+        return "Hibernating"
+
+    else:
+
+        return "Lost"
+
+datamart['Segment'] = datamart.apply(segment_me, axis = 1)
+
+Visualization of the Segmentation
+
+import squarify
+
+plt.figure(figsize = (15,6))
+
+a = squarify.plot(sizes = datamart['Segment'].value_counts().values, label = datamart['Segment'].value_counts().index,
+
+             alpha =.7)
+
+plt.title("Tree Map for Customer segmentation");
+
+#color = ['r','b','g','c','y','m','k','w']
+
+
+Conclusion
+
+Lost Customer: are high in percentage Champions: should be given more focus as they contribute more to the organization Loyal Customer: have good holding in the organization About to sleep: few of our customer are in verge of completely disappering
